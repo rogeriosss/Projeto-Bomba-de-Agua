@@ -99,7 +99,7 @@ public class Dashboard extends JFrame {
                 break;
             case 2: // 0010: level_low, water_flow = ON
                 setWaterLevel(0);
-                setPumpStatus("Tanque status: Atenção! Caixa d'água 10%, mas recebendo água da rua.");
+                setPumpStatus("Tanque status: Atenção! Caixa d'água 25%, mas recebendo água da rua.");
                 break;
             case 1: // 0001: Apenas water_flow = ON
                 setWaterLevel(0);
