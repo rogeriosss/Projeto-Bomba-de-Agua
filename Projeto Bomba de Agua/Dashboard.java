@@ -3,35 +3,6 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.swing.*;
 
-class Tank {
-    private int waterLevel; // 0: low, 1: medium, 2: high
-    private Dashboard dashboard;
-
-    public Tank(Dashboard dashboard) {
-        this.dashboard = dashboard;
-        this.waterLevel = 0; // Default to low level
-    }
-
-    public void setWaterLevel(int level) {
-        this.waterLevel = level;
-        updateDashboard();
-    }
-
-    private void updateDashboard() {
-        switch (waterLevel) {
-            case 0:
-                dashboard.updateWaterLevel("low");
-                break;
-            case 1:
-                dashboard.updateWaterLevel("medium");
-                break;
-            case 2:
-                dashboard.updateWaterLevel("high");
-                break;
-        }
-    }
-}
-
 public class Dashboard extends JFrame {
     private JLabel waterLevelLabel;
     private JLabel pumpStatusLabel;
@@ -39,8 +10,11 @@ public class Dashboard extends JFrame {
     private Map<String, ImageIcon> waterLevelImages;
     private JButton startPumpButton;
     private JButton stopPumpButton;
+    private Tank tank;
 
-    public Dashboard() {
+    public Dashboard(Tank tank) {
+        this.tank = tank;
+
         setTitle("Dashboard");
         setSize(500, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -93,14 +67,63 @@ public class Dashboard extends JFrame {
         pumpHistoryArea.append(history + "\n");
     }
 
+    public void setWaterLevel(int level) {
+        switch (level) {
+            case 0:
+                updateWaterLevel("low");
+                break;
+            case 1:
+                updateWaterLevel("medium");
+                break;
+            case 2:
+                updateWaterLevel("high");
+                break;
+        }
+    }
+
+    public void setPumpStatus(String status) {
+        updatePumpStatus(status);
+    }
+
+    public void refreshDashboard() {
+        int codeStatus = tank.getCode_dashboard();
+
+        switch (codeStatus) {
+            case 4: // 1111: level_low, level_medium, level_high, water_flow = ON
+                setWaterLevel(2);
+                setPumpStatus("Tanque status: Caixa d'água com 100% e recebendo água da rua");
+                break;
+            case 3: // 0111: level_low, level_medium, water_flow = ON
+                setWaterLevel(1);
+                setPumpStatus("Tanque status: Caixa d'água com 50%, recebendo água da rua");
+                break;
+            case 2: // 0010: level_low, water_flow = ON
+                setWaterLevel(0);
+                setPumpStatus("Tanque status: Atenção! Caixa d'água 10%, mas recebendo água da rua.");
+                break;
+            case 1: // 0001: Apenas water_flow = ON
+                setWaterLevel(0);
+                setPumpStatus("Tanque status: ALERTA! Caixa d'água vazia, mas recebendo água da rua!");
+                break;
+            case 0: // 0000: Nenhum sensor está ativo
+                setWaterLevel(0);
+                setPumpStatus("Tanque status: EMERGENCIA! Caixa d'água vazia, sem água da rua!");
+                break;
+            default:
+                setPumpStatus("Tanque status: Erros nos sensores, verificar!");
+                break;
+        }
+    }
+
     public static void main(String[] args) {
-        Dashboard dashboard = new Dashboard();
-        Tank tank = new Tank(dashboard);
+        Tank tank = new Tank();
+        Dashboard dashboard = new Dashboard(tank);
 
         // Simulate updates
-        tank.setWaterLevel(1); // Medium level
-        dashboard.updatePumpStatus("Bomba 1 ligada, Bomba 2 desligada");
-        dashboard.addPumpHistory("Bomba 1 ligada por 2 horas");
-        dashboard.addPumpHistory("Bomba 2 desligada por 3 horas");
+        tank.setLevel_low();
+        tank.setLevel_medium();
+        tank.setLevel_high();
+        tank.setWater_flow();
+        dashboard.refreshDashboard();
     }
 }
