@@ -36,12 +36,13 @@ public class Dashboard extends JFrame {
     private JLabel waterLevelLabel;
     private JLabel pumpStatusLabel;
     private JTextArea pumpHistoryArea;
-
     private Map<String, ImageIcon> waterLevelImages;
+    private JButton startPumpButton;
+    private JButton stopPumpButton;
 
     public Dashboard() {
         setTitle("Dashboard");
-        setSize(400, 300);
+        setSize(500, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
@@ -64,6 +65,18 @@ public class Dashboard extends JFrame {
         pumpHistoryArea = new JTextArea();
         pumpHistoryArea.setEditable(false);
         add(new JScrollPane(pumpHistoryArea), BorderLayout.SOUTH);
+
+        // Control buttons
+        JPanel controlPanel = new JPanel();
+        startPumpButton = new JButton("Iniciar Bomba");
+        stopPumpButton = new JButton("Parar Bomba");
+        controlPanel.add(startPumpButton);
+        controlPanel.add(stopPumpButton);
+        add(controlPanel, BorderLayout.EAST);
+
+        // Button actions
+        startPumpButton.addActionListener(e -> updatePumpStatus("Bomba 1 ligada, Bomba 2 desligada"));
+        stopPumpButton.addActionListener(e -> updatePumpStatus("Bomba 1 e 2 desligada"));
 
         setVisible(true);
     }
