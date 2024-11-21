@@ -1,129 +1,158 @@
 import java.awt.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import javax.swing.*;
 
 public class Dashboard extends JFrame {
-    private JLabel waterLevelLabel;
     private JLabel pumpStatusLabel;
     private JTextArea pumpHistoryArea;
-    private Map<String, ImageIcon> waterLevelImages;
-    private JButton startPumpButton;
-    private JButton stopPumpButton;
-    private Tank tank;
+    private JButton startPump1Button;
+    private JButton stopPump1Button;
+    private JButton startPump2Button;
+    private JButton stopPump2Button;
 
-    public Dashboard(Tank tank) {
-        this.tank = tank;
+    private Pumpss pumpss; // Instância de Pumpss
+    private TankPanel tankPanel; // Painel para desenhar o tanque
 
-        setTitle("Dashboard");
-        setSize(500, 400);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
+    public Dashboard(Pumpss pumpss) {
+        this.pumpss = pumpss;
 
-        // Initialize water level images
-        waterLevelImages = new HashMap<>();
-        waterLevelImages.put("low", new ImageIcon(getClass().getResource("/images/nivel25.png")));
-        waterLevelImages.put("medium", new ImageIcon(getClass().getResource("/images/nivel50.png")));
-        waterLevelImages.put("high", new ImageIcon(getClass().getResource("/images/nivel100.png")));
+        // Configuração da Janela
+        this.setTitle("Dashboard");
+        this.setSize(800, 600);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setLayout(new BorderLayout());
 
-        // Water level stage
-        waterLevelLabel = new JLabel();
-        updateWaterLevel("low"); // Default to low level
-        add(waterLevelLabel, BorderLayout.NORTH);
+        // Painel Gráfico do Tanque
+        tankPanel = new TankPanel();
+        this.add(tankPanel, BorderLayout.CENTER);
 
-        // Pump status stage
-        pumpStatusLabel = new JLabel("Bomba 1 e 2 desligada");
-        add(pumpStatusLabel, BorderLayout.CENTER);
+        // Área de Status das Bombas
+        pumpStatusLabel = new JLabel("Status das Bombas: Desconhecido");
+        this.add(pumpStatusLabel, BorderLayout.NORTH);
 
-        // Pump history stage
-        pumpHistoryArea = new JTextArea();
+        // Área de Histórico
+        pumpHistoryArea = new JTextArea(10, 30);
         pumpHistoryArea.setEditable(false);
-        add(new JScrollPane(pumpHistoryArea), BorderLayout.SOUTH);
+        this.add(new JScrollPane(pumpHistoryArea), BorderLayout.SOUTH);
 
-        // Control buttons
-        JPanel controlPanel = new JPanel();
-        startPumpButton = new JButton("Iniciar Bomba");
-        stopPumpButton = new JButton("Parar Bomba");
-        controlPanel.add(startPumpButton);
-        controlPanel.add(stopPumpButton);
-        add(controlPanel, BorderLayout.EAST);
+        // Painel de Botões
+        JPanel buttonPanel = new JPanel();
+        startPump1Button = new JButton("Ligar Bomba 1");
+        stopPump1Button = new JButton("Desligar Bomba 1");
+        startPump2Button = new JButton("Ligar Bomba 2");
+        stopPump2Button = new JButton("Desligar Bomba 2");
 
-        // Button actions
-        startPumpButton.addActionListener(e -> updatePumpStatus("Bomba 1 ligada, Bomba 2 desligada"));
-        stopPumpButton.addActionListener(e -> updatePumpStatus("Bomba 1 e 2 desligada"));
+        buttonPanel.add(startPump1Button);
+        buttonPanel.add(stopPump1Button);
+        buttonPanel.add(startPump2Button);
+        buttonPanel.add(stopPump2Button);
 
-        setVisible(true);
+        this.add(buttonPanel, BorderLayout.EAST);
+
+        // Ações dos Botões
+        startPump1Button.addActionListener(e -> startPump(1));
+        stopPump1Button.addActionListener(e -> stopPump(1));
+        startPump2Button.addActionListener(e -> startPump(2));
+        stopPump2Button.addActionListener(e -> stopPump(2));
+
+        // Atualização Periódica
+        startDashboardUpdater();
+
+        this.setVisible(true);
     }
 
-    public void updateWaterLevel(String level) {
-        waterLevelLabel.setIcon(waterLevelImages.get(level));
-    }
-
-    public void updatePumpStatus(String status) {
-        pumpStatusLabel.setText(status);
-    }
-
-    public void addPumpHistory(String history) {
-        pumpHistoryArea.append(history + "\n");
-    }
-
-    public void setWaterLevel(int level) {
-        switch (level) {
-            case 0:
-                updateWaterLevel("low");
-                break;
-            case 1:
-                updateWaterLevel("medium");
-                break;
-            case 2:
-                updateWaterLevel("high");
-                break;
+    private void startPump(int pumpNumber) {
+        if (pumpNumber == 1) {
+            pumpss.setWater_pump1(); // Liga a bomba 1
+        } else if (pumpNumber == 2) {
+            pumpss.setWater_pump2(); // Liga a bomba 2
         }
+        refreshDashboard();
     }
 
-    public void setPumpStatus(String status) {
-        updatePumpStatus(status);
+    private void stopPump(int pumpNumber) {
+        if (pumpNumber == 1) {
+            pumpss.setWater_pump1(); // Desliga a bomba 1
+        } else if (pumpNumber == 2) {
+            pumpss.setWater_pump2(); // Desliga a bomba 2
+        }
+        refreshDashboard();
     }
 
-    public void refreshDashboard() {
-        int codeStatus = tank.getCode_dashboard();
-
-        switch (codeStatus) {
-            case 4: // 1111: level_low, level_medium, level_high, water_flow = ON
-                setWaterLevel(2);
-                setPumpStatus("Tanque status: Caixa d'água com 100% e recebendo água da rua");
-                break;
-            case 3: // 0111: level_low, level_medium, water_flow = ON
-                setWaterLevel(1);
-                setPumpStatus("Tanque status: Caixa d'água com 50%, recebendo água da rua");
-                break;
-            case 2: // 0010: level_low, water_flow = ON
-                setWaterLevel(0);
-                setPumpStatus("Tanque status: Atenção! Caixa d'água 25%, mas recebendo água da rua.");
-                break;
-            case 1: // 0001: Apenas water_flow = ON
-                setWaterLevel(0);
-                setPumpStatus("Tanque status: ALERTA! Caixa d'água vazia, mas recebendo água da rua!");
-                break;
-            case 0: // 0000: Nenhum sensor está ativo
-                setWaterLevel(0);
-                setPumpStatus("Tanque status: EMERGENCIA! Caixa d'água vazia, sem água da rua!");
-                break;
-            default:
-                setPumpStatus("Tanque status: Erros nos sensores, verificar!");
-                break;
+    void refreshDashboard() {
+        // Atualiza o painel do tanque
+        tankPanel.setWaterLevel(pumpss.getWaterLevel());
+        
+                // Atualiza o status das bombas
+                pumpStatusLabel.setText("Status Bomba 1: " + pumpss.getPump1Status() +
+                        " | Bomba 2: " + pumpss.getPump2Status());
+        
+                // Atualiza o histórico
+                pumpHistoryArea.append("Bomba 1 - Tempo Ligada: " + pumpss.getPump1TotalWorkedTime() + " minutos\n");
+                pumpHistoryArea.append("Bomba 2 - Tempo Ligada: " + pumpss.getPump2TotalWorkedTime() + " minutos\n");
+            }
+        
+            private void startDashboardUpdater() {
+                Timer timer = new Timer();
+                timer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        refreshDashboard();
+                    }
+                }, 0, 5000); // Atualiza a cada 5 segundos
+            }
+        
+            // Painel Gráfico para Representar o Tanque
+            class TankPanel extends JPanel {
+                private int waterLevel = 0; // Nível de água (0-100)
+        
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+        
+                    // Desenho do Tanque
+                    g.setColor(Color.GRAY);
+                    g.fillRect(50, 50, 200, 300); // Contorno do tanque
+        
+                    // Nível de Água
+                    g.setColor(Color.BLUE);
+                    int waterHeight = (300 * waterLevel) / 100;
+                    g.fillRect(50, 350 - waterHeight, 200, waterHeight);
+        
+                    // Sensores e Indicadores de Nível
+                    g.setColor(Color.RED);
+        
+                    // Linha e texto do nível de 100%
+                    g.drawLine(50, 50, 250, 50);
+                    g.drawString("100%", 260, 55);
+        
+                    // Linha e texto do nível de 50%
+                    g.drawLine(50, 200, 250, 200);
+                    g.drawString("50%", 260, 205);
+        
+                    // Linha e texto do nível de 25%
+                    g.drawLine(50, 275, 250, 275);
+                    g.drawString("25%", 260, 280);
+        
+                    // Texto do Nível Atual
+                    g.setColor(Color.BLACK);
+                    g.drawString("Nível de Água: " + waterLevel + "%", 60, 370);
+                }
+        
+                public void setWaterLevel(String waterLevel2) {
+                    // TODO Auto-generated method stub
+                    throw new UnsupportedOperationException("Unimplemented method 'setWaterLevel'");
+                }
+        
+                public void setWaterLevel(int level) {
+            this.waterLevel = Math.max(0, Math.min(level, 100)); // Garante que o nível fique entre 0 e 100
+            repaint(); // Re-desenha o painel
         }
     }
 
     public static void main(String[] args) {
-        Tank tank = new Tank();
-        Dashboard dashboard = new Dashboard(tank);
-
-        // Simulate updates
-        tank.setLevel_low();
-        tank.setLevel_medium();
-        tank.setLevel_high();
-        tank.setWater_flow();
-        dashboard.refreshDashboard();
+        Pumpss pumpss = new Pumpss(); // Instância da classe Pumpss
+        new Dashboard(pumpss);       // Inicia o Dashboard com Pumpss
     }
 }
